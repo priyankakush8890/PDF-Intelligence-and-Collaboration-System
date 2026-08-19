@@ -160,24 +160,6 @@ User input is sanitized before rendering to help prevent unsafe HTML.
 
 ---
 
-## 🧠 AI Architecture
-
-### PDF Processing Flow
-
-```text
-Upload PDF
-    ↓
-Extract Text using PyPDF2
-    ↓
-Generate AI Summary using Gemini
-    ↓
-Split Text into Chunks
-    ↓
-Generate Embeddings
-    ↓
-Store Chunks and Embeddings
-
-
 🛠 Tech Stack
 Backend
 Python
