@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center">
+    <h2>My PDFs</h2>
+    <a class="btn btn-primary" href="/upload/">Upload PDF</a>
+</div>
+
+<form class="my-3" method="GET">
+    <input
+        class="form-control"
+        name="q"
+        value="{{ q }}"
+        placeholder="Search PDFs by name or content..."
+    >
+</form>
+
+<div class="row">
+
+    {% for d in documents %}
+
+    <div class="col-md-6 mb-3">
+        <div class="card p-3">
+
+            <h5>{{ d.title }}</h5>
+
+            <small>{{ d.created_at }}</small>
+
+            <p class="summary mt-2">
+                {{ d.summary }}
+            </p>
+
+            <!-- Show search query -->
+            {% if q %}
+                <small class="text-muted mb-2">
+                    Matching search: "{{ q }}"
+                </small>
+            {% endif %}
+
+            <div>
+                <a class="btn btn-dark"
+                   href="/document/{{ d.id }}/">
+                    Open PDF
+                </a>
+
+                <button
+                    class="btn btn-outline-primary"
+                    onclick="navigator.clipboard.writeText('{{request.scheme}}://{{request.get_host}}/share/{{d.share_token}}/')">
+                    Copy Share Link
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    {% empty %}
+
+    <p>No PDFs uploaded yet.</p>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

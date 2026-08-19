@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-3">
+  <h2>{{ doc.title }}</h2>
+
+  <p class="summary">
+    <b>AI Summary:</b> {{ doc.summary }}
+  </p>
+
+  {% if not is_shared %}
+
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+
+    <button
+      class="btn btn-outline-primary"
+      onclick="copyShareLink()"
+    >
+      Copy Share Link
+    </button>
+
+    <span id="copyMessage" class="text-success"></span>
+
+  </div>
+
+  <!-- Share via Email -->
+  <div class="card p-3 mt-3">
+
+    <h5>Share via Email</h5>
+
+    <form
+      method="POST"
+      action="{% url 'share_via_email' doc.id %}"
+    >
+      {% csrf_token %}
+
+      <div class="input-group">
+
+        <input
+          type="email"
+          name="email"
+          class="form-control"
+          placeholder="Enter recipient's email"
+          required
+        >
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          Send Invite
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+  {% endif %}
+</div>
+
+
+<div class="row g-3">
+
+  <!-- PDF Viewer -->
+  <div class="col-lg-6">
+
+    <div class="card p-2">
+
+      <a
+        href="{% url 'pdf_file' doc.pk %}?token={{ doc.share_token }}"
+        target="_blank"
+        class="btn btn-primary"
+      >
+        Open PDF Directly
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <!-- Comments -->
+  <div class="col-lg-3">
+
+    <div class="card p-3">
+
+      <h5>Comments</h5>
+
+
+      <div style="max-height: 380px; overflow: auto">
+
+        {% for c in comments %}
+
+        <!-- Main Comment -->
+        <div class="border-bottom py-2">
+
+          <b>{{ c.display_name }}</b>
+          <br>
+
+          <!-- Render formatted HTML -->
+          {{ c.body|safe }}
+
+          <br>
+
+          <small>{{ c.created_at }}</small>
+
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0 ms-2"
+            onclick="showReplyForm('{{ c.id }}')"
+          >
+            Reply
+          </button>
+
+
+          <!-- Replies -->
+          {% for reply in c.replies.all %}
+
+          <div class="ms-3 mt-2 border-start ps-2">
+
+            <b>{{ reply.display_name }}</b>
+            <br>
+
+            <!-- Render formatted reply -->
+            {{ reply.body|safe }}
+
+            <br>
+
+            <small>{{ reply.created_at }}</small>
+
+          </div>
+
+          {% endfor %}
+
+
+          <!-- Reply Form -->
+          <div
+            id="reply-form-{{ c.id }}"
+            class="mt-2"
+            style="display: none;"
+          >
+
+            <form method="post" class="rich-comment-form">
+
+              {% csrf_token %}
+
+              <input
+                type="hidden"
+                name="parent_id"
+                value="{{ c.id }}"
+              >
+
+              {% if is_shared and not user.is_authenticated %}
+
+              <input
+                class="form-control mb-2"
+                name="guest_name"
+                placeholder="Your name"
+              >
+
+              {% endif %}
+
+
+              <!-- Rich Text Toolbar -->
+              <div class="mb-2">
+
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  onclick="formatText(this, 'bold')"
+                >
+                  <b>B</b>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  onclick="formatText(this, 'italic')"
+                >
+                  <i>I</i>
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  onclick="formatText(this, 'insertUnorderedList')"
+                >
+                  • List
+                </button>
+
+              </div>
+
+
+              <!-- Rich Text Reply Editor -->
+              <div
+                class="rich-editor form-control mb-2"
+                contenteditable="true"
+                style="min-height: 80px;"
+                data-placeholder="Write a reply..."
+              ></div>
+
+
+              <input
+                type="hidden"
+                name="body"
+                class="rich-body"
+              >
+
+
+              <button
+                class="btn btn-primary btn-sm"
+              >
+                Reply
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+
+        {% empty %}
+
+        <p>No comments yet.</p>
+
+        {% endfor %}
+
+      </div>
+
+
+      <!-- New Comment Form -->
+      <form
+        method="post"
+        class="mt-3 rich-comment-form"
+      >
+
+        {% csrf_token %}
+
+        {% if is_shared and not user.is_authenticated %}
+
+        <input
+          class="form-control mb-2"
+          name="guest_name"
+          placeholder="Your name"
+        >
+
+        {% endif %}
+
+
+        <!-- Rich Text Toolbar -->
+        <div class="mb-2">
+
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            onclick="formatText(this, 'bold')"
+          >
+            <b>B</b>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            onclick="formatText(this, 'italic')"
+          >
+            <i>I</i>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            onclick="formatText(this, 'insertUnorderedList')"
+          >
+            • List
+          </button>
+
+        </div>
+
+
+        <!-- Rich Text Editor -->
+        <div
+          class="rich-editor form-control mb-2"
+          contenteditable="true"
+          style="min-height: 100px;"
+          data-placeholder="Add a comment"
+        ></div>
+
+
+        <!-- Hidden field sent to Django -->
+        <input
+          type="hidden"
+          name="body"
+          class="rich-body"
+        >
+
+
+        <button class="btn btn-primary btn-sm">
+          Comment
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- AI Chat -->
+  <div class="col-lg-3">
+
+    <div class="card p-3">
+
+      <h5>Ask AI</h5>
+
+      <div
+        id="chat"
+        class="chat-box"
+      ></div>
+
+
+      <div class="input-group mt-2">
+
+        <input
+          id="question"
+          class="form-control"
+          placeholder="Ask about this PDF"
+        >
+
+        <button
+          class="btn btn-dark"
+          onclick="ask()"
+        >
+          Send
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+  /*
+    Apply formatting to the editor
+    belonging to the clicked toolbar.
+  */
+  function formatText(button, command) {
+
+    const form = button.closest("form");
+
+    const editor =
+      form.querySelector(".rich-editor");
+
+    editor.focus();
+
+    document.execCommand(
+      command,
+      false,
+      null
+    );
+
+  }
+
+
+  /*
+    Before submitting a comment or reply,
+    copy the formatted HTML into the hidden
+    Django form field.
+  */
+  document
+    .querySelectorAll(".rich-comment-form")
+    .forEach(function (form) {
+
+      form.addEventListener(
+        "submit",
+        function (event) {
+
+          const editor =
+            form.querySelector(".rich-editor");
+
+          const hiddenInput =
+            form.querySelector(".rich-body");
+
+          const content =
+            editor.innerHTML.trim();
+
+
+          if (!content) {
+
+            event.preventDefault();
+
+            alert(
+              "Please write a comment before submitting."
+            );
+
+            return;
+
+          }
+
+
+          hiddenInput.value =
+            content;
+
+        }
+      );
+
+    });
+
+
+  function showReplyForm(commentId) {
+
+    const form =
+      document.getElementById(
+        "reply-form-" + commentId
+      );
+
+    if (form.style.display === "none") {
+
+      form.style.display = "block";
+
+    } else {
+
+      form.style.display = "none";
+
+    }
+
+  }
+
+
+  function copyShareLink() {
+
+    const shareLink =
+      window.location.origin +
+      "{% url 'shared_document' doc.share_token %}";
+
+
+    navigator.clipboard
+      .writeText(shareLink)
+
+      .then(() => {
+
+        document.getElementById(
+          "copyMessage"
+        ).textContent =
+          "Link copied!";
+
+      })
+
+      .catch((error) => {
+
+        console.error(error);
+
+        document.getElementById(
+          "copyMessage"
+        ).textContent =
+          "Could not copy link.";
+
+      });
+
+  }
+
+
+  const token =
+    "{{ doc.share_token }}";
+
+  const chat =
+    document.getElementById("chat");
+
+
+  function add(text, type) {
+
+    const message =
+      document.createElement("div");
+
+    message.className =
+      "msg " + type;
+
+    message.textContent =
+      text;
+
+    chat.appendChild(message);
+
+    chat.scrollTop =
+      chat.scrollHeight;
+
+  }
+
+
+  
+
+async function ask() {
+
+    const questionInput =
+        document.getElementById("question");
+
+    if (!questionInput.value.trim()) {
+        return;
+    }
+
+    const text = questionInput.value;
+
+    questionInput.value = "";
+
+    // Show user message
+    add(text, "user");
+
+    // Create empty AI message
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "msg assistant";
+
+    message.textContent = "";
+
+    chat.appendChild(message);
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+    try {
+
+        const response =
+            await fetch(
+
+                "/api/document/{{ doc.id }}/stream-chat/?token=" + token,
+
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "X-CSRFToken":
+                            "{{ csrf_token }}",
+
+                    },
+
+                    body: JSON.stringify({
+
+                        question: text,
+
+                    }),
+
+                }
+
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to get AI response"
+            );
+
+        }
+
+        const reader =
+            response.body.getReader();
+
+        const decoder =
+            new TextDecoder();
+
+        while (true) {
+
+            const {
+                done,
+                value
+            } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            const chunk =
+                decoder.decode(value);
+
+            // Add text gradually
+            message.textContent += chunk;
+
+            chat.scrollTop =
+                chat.scrollHeight;
+
+        }
+
+    }
+
+    catch (error) {
+
+        message.textContent =
+            "Failed to connect to the AI service.";
+
+    }
+
+}
+
+
+</script>
+
+{% endblock %}

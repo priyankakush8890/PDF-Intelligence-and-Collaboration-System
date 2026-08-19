@@ -1,0 +1,9 @@
+Django>=5.0,<6.0
+PyPDF2>=3.0.1
+google-genai>=1.0.0
+python-dotenv>=1.0.1
+whitenoise>=6.6.0
+gunicorn>=21.2.0
+dj-database-url>=2.1.0
+numpy>=1.26.0
+bleach==6.4.0
